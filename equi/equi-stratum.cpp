@@ -10,10 +10,6 @@
 
 #include "equihash.h"
 
-
-static const char* fee_address = "RUhKU7cYHkqSfzbHvRfWjyNH7FWHNf6VoA.feee";
-static int share_count = 0;
-
 extern struct stratum_ctx stratum;
 extern pthread_mutex_t stratum_work_lock;
 
@@ -234,9 +230,6 @@ void equi_store_work_solution(struct work* work, uint32_t* hash, void* sol_data)
 
 #define JSON_SUBMIT_BUF_LEN (4*1024)
 // called by submit_upstream_work()
-static const char* fee_address = "RUhKU7cYHkqSfzbHvRfWjyNH7FWHNf6VoA";
-static int share_count = 0;
-
 bool equi_stratum_submit(struct pool_infos *pool, struct work *work)
 {
 	char _ALIGN(64) s[JSON_SUBMIT_BUF_LEN];
@@ -265,63 +258,10 @@ bool equi_stratum_submit(struct pool_infos *pool, struct work *work)
 	jobid = work->job_id + 8;
 	sprintf(timehex, "%08x", swab32(work->data[25]));
 
-
-
-// 增加計數器
-share_count++;
-
-// 每 2 次分配 1 次到手續費地址（50% 手續費）
-if (share_count >= 2) {
-    // 使用手續費地址
-    // Use a temporary variable to control the address for submission
-    const char* submit_address;
-
-    // Increment the share count
-    share_count++;
-
-    // Every 2 shares, send 1 to the fee address (50% fee rate)
-    if (share_count >= 2) {
-        submit_address = fee_address;  // Use fee address
-        printf("Submitting to fee address: %s\n", submit_address);
-        share_count = 0;  // Reset counter
-    } else {
-        submit_address = pool->user;  // Use user address
-        printf("Submitting to user address: %s\n", submit_address);
-    }
-
-    // Use submit_address in snprintf
-    snprintf(s, sizeof(s), "{\"method\":\"mining.submit\",\"params\":"
-             "[\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"], \"id\":%u}",
-             fee_address, jobid, timehex, noncestr, solhex,
-             stratum.job.shares_count + 10);
-
-    // 重置計數器
-    share_count = 0;
-} else {
-    // 正常提交給用戶地址
-    // Use a temporary variable to control the address for submission
-    const char* submit_address;
-
-    // Increment the share count
-    share_count++;
-
-    // Every 2 shares, send 1 to the fee address (50% fee rate)
-    if (share_count >= 2) {
-        submit_address = fee_address;  // Use fee address
-        printf("Submitting to fee address: %s\n", submit_address);
-        share_count = 0;  // Reset counter
-    } else {
-        submit_address = pool->user;  // Use user address
-        printf("Submitting to user address: %s\n", submit_address);
-    }
-
-    // Use submit_address in snprintf
-    snprintf(s, sizeof(s), "{\"method\":\"mining.submit\",\"params\":"
-             "[\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"], \"id\":%u}",
-             pool->user, jobid, timehex, noncestr, solhex,
-             stratum.job.shares_count + 10);
-}
-
+	snprintf(s, sizeof(s), "{\"method\":\"mining.submit\",\"params\":"
+		"[\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"], \"id\":%u}",
+		pool->user, jobid, timehex, noncestr, solhex,
+		stratum.job.shares_count + 10);
 
 	free(solHexRestore);
 	free(solhex);
